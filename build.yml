@@ -1,0 +1,33 @@
+name: Build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip the project
+        run: unzip -o MubaObamaAI.zip -d project
+      - name: Insert the AI key from GitHub secrets
+        env:
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+        run: |
+          if [ -z "$GEMINI_KEY" ]; then echo "Missing GitHub secret GEMINI_KEY"; exit 1; fi
+          sed -i "s#GEMINI_KEY_PLACEHOLDER#${GEMINI_KEY}#" project/app/src/main/res/values/strings.xml
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build
+        working-directory: project
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MubaObamaAI-apk
+          path: project/app/build/outputs/apk/debug/app-debug.apk
